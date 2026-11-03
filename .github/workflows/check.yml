@@ -1,0 +1,31 @@
+# Runs the check the game, the launcher and the registry run, and packages the .hshader.
+name: check
+
+on:
+  push:
+  pull_request:
+
+env:
+  HORIZON_REV: 294448014fba585f8d5d09dd8886f482493b6417
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/horizon-shader
+          key: horizon-shader-${{ env.HORIZON_REV }}
+      - name: Install horizon-shader
+        run: |
+          command -v horizon-shader || cargo install --git https://github.com/horizon-rust/horizon \
+            --rev "$HORIZON_REV" horizon-shader-api --locked
+      - run: horizon-shader check pack/daybreak
+      - run: cargo test -p daybreak-build
+      - name: Build, check and package every preset
+        run: cargo run -p daybreak-build -- --check --pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: daybreak
+          path: dist/*.hshader

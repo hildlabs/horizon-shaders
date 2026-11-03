@@ -1,0 +1,6 @@
+*.hshader
+target/
+# Preset packs built by daybreak-build.
+dist/
+# Local clones of Horizon and other mods, for reference only.
+ref/

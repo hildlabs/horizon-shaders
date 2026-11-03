@@ -1,0 +1,13 @@
+[package]
+name = "daybreak-build"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Builds Daybreak's quality presets (Low, Medium, High, Ultra) from its one source pack"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+# Edits the pack's manifest in place, keeping its comments and layout.
+toml_edit = "0.22"

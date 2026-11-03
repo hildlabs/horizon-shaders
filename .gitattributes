@@ -1,0 +1,2 @@
+# LF everywhere, so a .hshader built on Windows and one built by CI have the same SHA-256.
+* text=auto eol=lf

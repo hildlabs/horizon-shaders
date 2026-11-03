@@ -1,0 +1,51 @@
+# Daybreak's quality presets. `cargo run -p daybreak-build` turns pack/daybreak into one pack
+# per preset (daybreak_low, daybreak_medium, ...), which the game lists side by side.
+#
+# What a pack's options can't change, a preset does: the shadow pass, which draws the terrain
+# in its square again each frame (and turns Horizon's GPU culling off), is set by the manifest
+# alone. `shadow` is that square; leave it out for no shadow map at all. `mob_shadows = false`
+# drops the terrain mask the composite needs to shade mobs. `defaults` are option defaults the
+# player can still change on the pack's settings page.
+
+[[preset]]
+id = "low"
+name = "Low"
+description = "No shadow map and no water mirror: the light, sky, water and grade at the least cost."
+gpu_ms = 0.5
+mob_shadows = false
+[preset.defaults]
+shadows = false
+relight_entities = false
+reflections = false
+god_rays = 0.0
+sun_glare = 0.5
+bloom = 0.35
+haze = 0.5
+
+[[preset]]
+id = "medium"
+name = "Medium"
+description = "Sharp shadows over 64 blocks, no water mirror."
+gpu_ms = 1.0
+shadow = { resolution = 1024, distance = 64.0 }
+[preset.defaults]
+shadow_softness = "Sharp"
+reflections = false
+god_rays = 0.35
+
+[[preset]]
+id = "high"
+name = "High"
+description = "Soft shadows over 96 blocks and the water mirror."
+gpu_ms = 2.0
+shadow = { resolution = 2048, distance = 96.0 }
+
+[[preset]]
+id = "ultra"
+name = "Ultra"
+description = "Very soft shadows over 160 blocks from a finer map, and everything else at its best."
+gpu_ms = 3.5
+shadow = { resolution = 4096, distance = 160.0 }
+[preset.defaults]
+shadow_softness = "Very soft"
+god_rays = 0.6
