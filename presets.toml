@@ -1,5 +1,6 @@
 # Daybreak's quality presets. `cargo run -p daybreak-build` turns pack/daybreak into one pack
-# per preset (daybreak_low, daybreak_medium, ...), which the game lists side by side.
+# per preset (daybreak_low, daybreak_medium, daybreak_ultra), which the game lists beside
+# Daybreak itself: pack/daybreak is the High preset (2048², 96 blocks), the one in the registry.
 #
 # What a pack's options can't change, a preset does: the shadow pass, which draws the terrain
 # in its square again each frame (and turns Horizon's GPU culling off), is set by the manifest
@@ -32,13 +33,6 @@ shadow = { resolution = 1024, distance = 64.0 }
 shadow_softness = "Sharp"
 reflections = false
 god_rays = 0.35
-
-[[preset]]
-id = "high"
-name = "High"
-description = "Soft shadows over 96 blocks and the water mirror."
-gpu_ms = 2.0
-shadow = { resolution = 2048, distance = 96.0 }
 
 [[preset]]
 id = "ultra"

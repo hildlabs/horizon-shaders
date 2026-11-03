@@ -27,15 +27,16 @@ the GPU never runs it, and nothing is recompiled with text substitution.
 ## Presets
 
 The most expensive part, the shadow pass, draws the terrain in its square again each frame and
-is fixed by the manifest, out of reach of any option. So Daybreak comes as four packs built
-from one source by [`daybreak-build`](tools/daybreak-build), a small Rust tool, from
-[`presets.toml`](presets.toml):
+is fixed by the manifest, out of reach of any option. So besides Daybreak itself (the High
+preset, the one in Horizon's mod registry), three more packs are built from the same source by
+[`daybreak-build`](tools/daybreak-build), a small Rust tool, from [`presets.toml`](presets.toml).
+Each release has them as `daybreak-presets-<version>.zip`:
 
 | Pack | Shadow map | Water mirror | Mob shadows | Budget |
 | --- | --- | --- | --- | --- |
 | Daybreak Low | none | off | off | 0.5 ms |
 | Daybreak Medium | 1024², 64 blocks, sharp | off | on | 1.0 ms |
-| Daybreak High | 2048², 96 blocks, soft | on | on | 2.0 ms |
+| **Daybreak** (High) | 2048², 96 blocks, soft | on | on | 2.0 ms |
 | Daybreak Ultra | 4096², 160 blocks, very soft | on | on | 3.5 ms |
 
 Each one's options can still be changed in the game; a preset only sets their defaults.
@@ -43,7 +44,10 @@ Each one's options can still be changed in the game; a preset only sets their de
 ## Try it
 
 1. Install the Horizon launcher and a Nightly from 2026-11-03 or newer.
-2. Build the presets and install them into the game:
+2. Install Daybreak from the launcher's mod browser (Shader packs), or put
+   `daybreak-<version>.hshader` from a [release](https://github.com/hildlabs/horizon-shaders/releases)
+   into `shaderpacks/` beside your `options.txt` (and the presets from the zip, if you want them).
+   To build them yourself:
    ```powershell
    cargo run -p daybreak-build -- --check --install "$env:APPDATA\horizon\shaderpacks"
    ```
@@ -51,7 +55,7 @@ Each one's options can still be changed in the game; a preset only sets their de
    ```powershell
    powershell -ExecutionPolicy Bypass -File tools\link-pack.ps1
    ```
-3. In the game: **Options > Horizon Settings > Shader Packs > Daybreak High (Horizon)** (or
+3. In the game: **Options > Horizon Settings > Shader Packs > Daybreak (Horizon)** (or Daybreak
    Low, Medium, Ultra), then **Shader Options…** for the settings.
 4. For light from torches in your hand and dropped on the ground, turn on Horizon's
    **Dynamic lights** in the game's Horizon settings (it is off by default).

@@ -1,9 +1,9 @@
 schema = 1
 id = "daybreak"
 name = "Daybreak"
-version = "0.1.0"
+version = "0.1.1"
 api = "0.1"
-description = "Sun shadows, a warm and cool day/night light, waving plants, reflective water, coloured block light, sun rays and bloom. Built to cost as little GPU time as possible."
+description = "Sun shadows, warm sunlight and blue shade, waving plants, reflective water, coloured block light, sun rays and glare, haze and bloom. Built to cost as little GPU time as possible."
 authors = ["hildlabs"]
 license = "MIT"
 shared = ["common.wgsl"]
@@ -56,7 +56,7 @@ file = "post/composite.wgsl"
 name = "Composite"
 
 [budget]
-gpu_ms = 2.5
+gpu_ms = 2.0
 
 # --- Materials: MaterialInput.material and VertexInput.material (ids in common.wgsl) ---
 

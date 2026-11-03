@@ -1,0 +1,21 @@
+# Daybreak's page in the Horizon mod registry (docs/api/mod-index.md in Horizon): the registry
+# reads it from this repository at the newest release's tag.
+name = "Daybreak"
+summary = "Sun shadows, reflective water, waving plants, coloured light, sun rays and bloom, built to cost as little GPU time as possible."
+authors = ["hildlabs"]
+license = "MIT"
+description = """
+Daybreak is a shader pack in Horizon's own format. It runs inside Horizon's renderer, so Horizon's culling, batching and LOD stay in charge, and it adds as little GPU time as it can.
+
+- Sun and moon shadows with smooth edges
+- Warm sunlight, blue sky light in the shade, a dim blue night
+- Coloured block light: soul fire blue, redstone red, copper green, froglights
+- Light from torches in your hand (turn on Horizon's Dynamic lights in Extras)
+- Waving leaves, grass, flowers and crops
+- Water with waves, reflections, refraction and the sun's glint
+- A deeper sky with warm sunsets, sun rays, sun glare and haze
+- Mobs take the sun's shadow; the Nether and the End get their own light
+
+Every effect can be changed or turned off in the game: Options > Horizon Settings > Shader Packs > Shader Options. Daybreak itself is the High preset (soft shadows over 96 blocks, water reflections). Low, Medium and Ultra are in each release as `daybreak-presets-<version>.zip`, for slower and faster GPUs.
+
+Original code, no Minecraft assets. Source and the Rust tool that builds the presets: https://github.com/hildlabs/horizon-shaders"""
