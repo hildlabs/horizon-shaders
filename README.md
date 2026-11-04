@@ -35,39 +35,40 @@ shadow pass included (F3: [day](docs/screenshots/f3-day.jpg), [night](docs/scree
 Every option is a WGSL `override` constant, so a switched-off effect is a branch on a constant:
 the GPU never runs it, and nothing is recompiled with text substitution.
 
-## Presets
+## Quality
 
-The most expensive part, the shadow pass, draws the terrain in its square again each frame and
-is fixed by the manifest, out of reach of any option. So besides Daybreak itself (the High
-preset, the one in Horizon's mod registry), three more packs are built from the same source by
-[`daybreak-build`](tools/daybreak-build), a small Rust tool, from [`presets.toml`](presets.toml).
-Each release has them as `daybreak-presets-<version>.zip`:
+The most expensive part is the shadow pass, which draws the terrain in its square again each
+frame. Its size is up to the player: **Shadows** off means no shadow map and no pass at all,
+**Shadow detail** is the map's size and **Shadow distance** the square it covers (Lighting page of
+the Shader Options). Changing them rebuilds the map; nothing else is reloaded. The defaults are
+High; for slower or faster GPUs:
 
-| Pack | Shadow map | Water mirror | Mob shadows | Budget |
-| --- | --- | --- | --- | --- |
-| Daybreak Low | none | off | off | 0.5 ms |
-| Daybreak Medium | 1024², 64 blocks, sharp | off | on | 1.0 ms |
-| **Daybreak** (High) | 2048², 96 blocks, soft | on | on | 2.0 ms |
-| Daybreak Ultra | 4096², 160 blocks, very soft | on | on | 3.5 ms |
+| Level | Shadows | Shadow detail | Shadow distance | Shadow edges | Reflections | Sun rays |
+| --- | --- | --- | --- | --- | --- | --- |
+| Low (about 0.5 ms) | off | – | – | – | off | 0 |
+| Medium (about 1 ms) | on | 1024 | 64 | Sharp | off | 0.35 |
+| **High** (default, about 1.2–1.4 ms) | on | 2048 | 96 | Soft | on | 0.5 |
+| Ultra | on | 4096 | 160 | Very soft | on | 0.6 |
 
-Each one's options can still be changed in the game; a preset only sets their defaults.
+Until 0.1.1 these were four separate packs (Daybreak Low, Medium and Ultra came in a zip),
+because a pack's shadow map was fixed by its manifest. Horizon's shader API now lets options
+size it ([horizon#8557](https://github.com/horizon-rust/horizon/pull/8557)), so one pack does
+all four. Old `daybreak_low`, `daybreak_medium` and `daybreak_ultra` packs can be deleted from
+`shaderpacks/`.
 
 ## Try it
 
-1. Install the Horizon launcher and a Nightly from 2026-11-03 or newer.
+1. Install the Horizon launcher and a Nightly from 2026-11-05 or newer (Daybreak 0.2 needs
+   Horizon's `[shadow]` options; 0.1.1 runs on Nightlies from 2026-11-03).
 2. Install Daybreak from the launcher's mod browser (Shader packs), or put
    `daybreak-<version>.hshader` from a [release](https://github.com/hildlabs/horizon-shaders/releases)
-   into `shaderpacks/` beside your `options.txt` (and the presets from the zip, if you want them).
-   To build them yourself:
-   ```powershell
-   cargo run -p daybreak-build -- --check --install "$env:APPDATA\horizon\shaderpacks"
-   ```
+   into `shaderpacks/` beside your `options.txt`.
    For working on the shaders, link the source pack instead (it hot-reloads every save):
    ```powershell
    powershell -ExecutionPolicy Bypass -File tools\link-pack.ps1
    ```
-3. In the game: **Options > Horizon Settings > Shader Packs > Daybreak (Horizon)** (or Daybreak
-   Low, Medium, Ultra), then **Shader Options…** for the settings.
+3. In the game: **Options > Horizon Settings > Shader Packs > Daybreak (Horizon)**, then
+   **Shader Options…** for the settings and the quality (Lighting page).
 4. For light from torches in your hand and dropped on the ground, turn on Horizon's
    **Dynamic lights** in the game's Horizon settings (it is off by default).
 5. Press **F3** to see each pass's GPU time.
@@ -75,14 +76,10 @@ Each one's options can still be changed in the game; a preset only sets their de
 ## Develop
 
 ```sh
-cargo install --git https://github.com/horizon-rust/horizon --rev 294448014fba585f8d5d09dd8886f482493b6417 horizon-shader-api --locked
+cargo install --git https://github.com/horizon-rust/horizon --rev ee06d18c391102428fa5dded4f3d9d091ea361f0 horizon-shader-api --locked
 horizon-shader check pack/daybreak    # what the game, the launcher and the registry check
 horizon-shader pack pack/daybreak     # writes daybreak-<version>.hshader
-cargo test -p daybreak-build          # the preset tool's tests
-cargo run -p daybreak-build -- --check --pack   # every preset into dist/, checked and packaged
 ```
-
-A WGSL line tagged `// preset:mob-shadows` is left out of presets with `mob_shadows = false`.
 
 | File | Stage |
 | --- | --- |

@@ -6,7 +6,8 @@ on:
   pull_request:
 
 env:
-  HORIZON_REV: 294448014fba585f8d5d09dd8886f482493b6417
+  # Horizon's main with #8557 ([shadow] option, resolution_option, distance_option).
+  HORIZON_REV: ee06d18c391102428fa5dded4f3d9d091ea361f0
 
 jobs:
   check:
@@ -21,13 +22,9 @@ jobs:
         run: |
           command -v horizon-shader || cargo install --git https://github.com/horizon-rust/horizon \
             --rev "$HORIZON_REV" horizon-shader-api --locked
+      - run: horizon-shader check pack/daybreak
       - run: horizon-shader pack pack/daybreak
-      - run: cargo test -p daybreak-build
-      - name: Build, check and package every preset
-        run: cargo run -p daybreak-build -- --check --pack
       - uses: actions/upload-artifact@v4
         with:
           name: daybreak
-          path: |
-            pack/*.hshader
-            dist/*.hshader
+          path: pack/*.hshader

@@ -1,3 +1,0 @@
-[workspace]
-members = ["tools/daybreak-build"]
-resolver = "3"

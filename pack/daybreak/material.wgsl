@@ -9,6 +9,7 @@ override block_light_strength: f32 = 1.0;
 override colored_lights: bool = true;
 override reflections: bool = true;
 override water_clarity: f32 = 0.5;
+override relight_entities: bool = true;
 
 fn is_foliage(material: u32) -> bool {
     return material >= MAT_LEAVES && material <= MAT_VINE;
@@ -16,9 +17,10 @@ fn is_foliage(material: u32) -> bool {
 
 fn material(input: MaterialInput) -> Surface {
     // Marks the pixel as terrain Daybreak lit itself, for the composite's `relight_entities`
-    // (translucent terrain stores nothing). The Low preset drops this line, and with it the
-    // target it writes.
-    set_surface(input.normal, 0.0, 0.0); // preset:mob-shadows
+    // (translucent terrain stores nothing). Nothing reads it without shadows, so it isn't written.
+    if relight_entities && shadows {
+        set_surface(input.normal, 0.0, 0.0);
+    }
     // Lava glows by itself.
     if input.fluid == 2u {
         return Surface(vec4<f32>(input.albedo.rgb * input.tint.rgb * 1.05, input.albedo.a));

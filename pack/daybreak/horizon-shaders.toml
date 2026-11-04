@@ -1,7 +1,7 @@
 schema = 1
 id = "daybreak"
 name = "Daybreak"
-version = "0.1.1"
+version = "0.2.0"
 api = "0.1"
 description = "Sun shadows, warm sunlight and blue shade, waving plants, reflective water, coloured block light, sun rays and glare, haze and bloom. Built to cost as little GPU time as possible."
 authors = ["hildlabs"]
@@ -22,9 +22,13 @@ file = "vertex.wgsl"
 name = "Wind and waves"
 
 [shadow]
+# The shadow pass is most of what Daybreak costs: it draws every section in the light's square
+# again, and half the distance is a quarter of the terrain. The player's options set all three:
+# `shadows` off means no map and no pass at all.
+option = "shadows"
+resolution_option = "shadow_resolution"
+distance_option = "shadow_distance"
 resolution = 2048
-# The shadow pass draws every section in this square again: half the distance is a quarter of
-# the terrain. The presets (presets.toml) set both.
 distance = 96.0
 # Leaves cast whole shadows: no alpha test in the shadow pass, and no shimmer far away.
 solid_materials = [1]
@@ -152,7 +156,7 @@ items = ["page:lighting", "page:water", "page:nature", "page:atmosphere", "page:
 id = "lighting"
 name = "Lighting"
 description = "Sun shadows and the light of the sky and of blocks."
-items = ["shadows", "shadow_softness", "sun_strength", "ambient_strength", "block_light_strength", "colored_lights", "relight_entities", ""]
+items = ["shadows", "shadow_softness", "shadow_resolution", "shadow_distance", "sun_strength", "ambient_strength", "block_light_strength", "colored_lights", "relight_entities", ""]
 
 [[pages]]
 id = "water"
@@ -181,9 +185,25 @@ items = ["bloom", "exposure", "contrast", "saturation", "vignette", ""]
 [[options]]
 id = "shadows"
 name = "Shadows"
-description = "Shadows cast by the sun and the moon."
+description = "Shadows cast by the sun and the moon. Off saves the most GPU time: there is no shadow pass at all."
 type = "bool"
 default = true
+
+[[options]]
+id = "shadow_resolution"
+name = "Shadow detail"
+description = "The shadow map's size in texels: sharper shadows from a finer map, at more cost."
+type = "choice"
+values = ["1024", "2048", "4096"]
+default = "2048"
+
+[[options]]
+id = "shadow_distance"
+name = "Shadow distance"
+description = "How far from you, in blocks, things cast shadows. The terrain drawn into the map grows with its square."
+type = "choice"
+values = ["64", "96", "160"]
+default = "96"
 
 [[options]]
 id = "shadow_softness"
