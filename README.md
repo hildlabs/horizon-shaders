@@ -5,6 +5,17 @@ reimplementation of Minecraft: Java Edition. It's written in WGSL against Horizo
 API (0.1). It runs inside Horizon's renderer and doesn't replace it, so Horizon's culling,
 batching, LOD and meshing stay in charge, and the pack adds as little GPU time as possible.
 
+![Sunset over the sea with Daybreak: sun glare, sun rays and reflections on the waves](docs/screenshots/sunset.jpg)
+
+<p>
+  <img src="docs/screenshots/day.jpg" width="49%" alt="A lake by day: reflections, sun rays and the sun's glint on the water">
+  <img src="docs/screenshots/night.jpg" width="49%" alt="The same lake at night: moonlight on the water under a dim blue sky">
+</p>
+
+On an RTX 4070 SUPER at 1920 × 1080 these scenes cost the pack 1.2–1.4 ms of GPU time per frame,
+shadow pass included (F3: [day](docs/screenshots/f3-day.jpg), [night](docs/screenshots/f3-night.jpg),
+[sunset](docs/screenshots/f3-sunset.jpg)).
+
 | Effect | How | Cost |
 | --- | --- | --- |
 | Sun and moon shadows | 2048² distorted shadow map, normal-offset lookup, slope-scaled bias, 1/4/9-tap grid PCF (smooth edges, no noise) | the shadow pass plus up to 9 compare taps per pixel |

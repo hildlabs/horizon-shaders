@@ -4,3 +4,6 @@ target/
 dist/
 # Local clones of Horizon and other mods, for reference only.
 ref/
+
+# Original screenshots; the README uses the JPEGs made from them.
+docs/screenshots/*.png
