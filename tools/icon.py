@@ -1,71 +1,88 @@
-"""Draws Daybreak's icon, icon.png: a 32 x 32 pixel-art sunrise over a grass block, scaled to
-256 x 256. No dependencies: the PNG is written by hand.
+"""Draws Daybreak's icon, icon.png: the README's sunset over the sea, cropped square on the sun,
+with the name across the water, the way the big shader packs show theirs (a scene of the pack and
+its name). 512 x 512, under the registry's 256 KiB.
 
     python tools/icon.py pack/daybreak/icon.png
+
+Needs Pillow. The lettering is Bahnschrift Bold Condensed, which ships with Windows; pass another
+font with --font on other systems.
 """
 
-import struct
-import sys
-import zlib
+import argparse
+import io
+from pathlib import Path
 
-SIZE, SCALE = 32, 8
-HORIZON = 20
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
+ROOT = Path(__file__).resolve().parent.parent
+SOURCE = ROOT / "docs" / "screenshots" / "sunset.jpg"
+FONT = "C:/Windows/Fonts/bahnschrift.ttf"
+WORK, OUT = 1024, 512
+MAX_BYTES = 256 * 1024
 
-def mix(a, b, t):
-    return tuple(round(x + (y - x) * t) for x, y in zip(a, b))
-
-
-def noise(x, y):
-    """A fixed value 0..1 per pixel, for the texture of grass and dirt."""
-    h = (x * 374761393 + y * 668265263) & 0xFFFFFFFF
-    h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
-    return (h & 0xFF) / 255
-
-
-def pixel(x, y):
-    if y < HORIZON:
-        # Sky: deep blue overhead to warm orange at the horizon.
-        t = y / (HORIZON - 1)
-        sky = mix((28, 52, 128), (120, 110, 170), min(t * 1.6, 1.0))
-        sky = mix(sky, (250, 146, 72), max(t - 0.45, 0.0) / 0.55)
-        # The sun, half risen, with a glow around it.
-        d = ((x - 15.5) ** 2 + (y - HORIZON + 0.5) ** 2) ** 0.5
-        if d < 6.5:
-            return mix((255, 246, 214), (255, 204, 96), d / 6.5)
-        glow = max(0.0, 1.0 - (d - 6.5) / 7.0)
-        return mix(sky, (255, 196, 120), glow * 0.6)
-    n = noise(x, y)
-    if y < HORIZON + 3 or (y == HORIZON + 3 and n > 0.5):
-        # Grass, lit warm by the low sun.
-        return mix((86, 150, 52), (128, 186, 70), n)
-    return mix((104, 70, 44), (146, 102, 64), n)
+# Where the square sits in the 1920 x 1080 screenshot: centred on the sun, the sand at the
+# bottom edge left out.
+SUN_X, TOP, SIDE = 952, 40, 960
+NIGHT = (8, 10, 30)
+GOLD = (255, 200, 130)
 
 
-def png(rows, width, height):
-    def chunk(kind, data):
-        body = kind + data
-        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
-
-    raw = b"".join(b"\x00" + bytes(c for px in row for c in px) for row in rows)
-    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
-    return (
-        b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", header)
-        + chunk(b"IDAT", zlib.compress(raw, 9))
-        + chunk(b"IEND", b"")
+def scene():
+    im = Image.open(SOURCE).convert("RGB")
+    im = im.crop((SUN_X - SIDE // 2, TOP, SUN_X + SIDE // 2, TOP + SIDE))
+    im = ImageEnhance.Color(im.resize((WORK, WORK), Image.LANCZOS)).enhance(1.12)
+    dark = Image.new("RGB", im.size, NIGHT)
+    # The water darkens towards the bottom, so the name reads on it.
+    band = Image.new("L", im.size, 0)
+    d = ImageDraw.Draw(band)
+    for y in range(WORK):
+        t = max(0.0, (y - WORK * 0.55) / (WORK * 0.45))
+        d.line([(0, y), (WORK, y)], fill=int(150 * t**1.3))
+    im = Image.composite(dark, im, band)
+    # A soft vignette keeps the eye on the sun.
+    vignette = Image.new("L", im.size, 0)
+    ImageDraw.Draw(vignette).ellipse(
+        (-WORK * 0.25, -WORK * 0.25, WORK * 1.25, WORK * 1.25), fill=255
     )
+    vignette = vignette.filter(ImageFilter.GaussianBlur(WORK * 0.12))
+    return Image.composite(im, dark, vignette.point(lambda v: 80 + v * 175 // 255))
 
 
-def main(path):
-    small = [[pixel(x, y) for x in range(SIZE)] for y in range(SIZE)]
-    rows = [
-        [small[y // SCALE][x // SCALE] for x in range(SIZE * SCALE)]
-        for y in range(SIZE * SCALE)
-    ]
-    with open(path, "wb") as f:
-        f.write(png(rows, SIZE * SCALE, SIZE * SCALE))
+def wordmark(im, font_path, word="DAYBREAK", size=230, baseline=860, tracking=0.07):
+    font = ImageFont.truetype(font_path, size)
+    try:
+        font.set_variation_by_name(b"Bold Condensed")
+    except (OSError, ValueError):
+        pass  # not a variable font: use it as it is
+    width = sum(font.getlength(c) for c in word) + tracking * size * (len(word) - 1)
+    layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    x = (WORK - width) / 2
+    for c in word:
+        d.text((x, baseline), c, font=font, fill=(255, 255, 255, 255), anchor="ls")
+        x += font.getlength(c) + tracking * size
+    # A gold line under the name: the first light on the horizon.
+    y = baseline + size * 0.16
+    d.rectangle(((WORK - width) / 2, y, (WORK + width) / 2, y + size * 0.06), fill=GOLD + (255,))
+    shadow = layer.split()[3].filter(ImageFilter.GaussianBlur(size * 0.12))
+    im.paste((0, 0, 20), (0, 0), shadow.point(lambda v: v * 170 // 255))
+    im.paste(layer, (0, 0), layer)
+    return im
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("out", nargs="?", default="icon.png")
+    p.add_argument("--font", default=FONT)
+    args = p.parse_args()
+    icon = wordmark(scene(), args.font).resize((OUT, OUT), Image.LANCZOS)
+    data = io.BytesIO()
+    icon.save(data, "PNG", optimize=True)
+    if data.tell() > MAX_BYTES:
+        raise SystemExit(f"icon is {data.tell() >> 10} KiB, over the registry's 256 KiB")
+    Path(args.out).write_bytes(data.getvalue())
+    print(f"{args.out}: {OUT} x {OUT}, {data.tell() >> 10} KiB")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "icon.png")
+    main()
