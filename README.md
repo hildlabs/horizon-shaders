@@ -12,19 +12,20 @@ batching, LOD and meshing stay in charge, and the pack adds as little GPU time a
   <img src="docs/screenshots/night.jpg" width="49%" alt="The same lake at night: moonlight on the water under a dim blue sky">
 </p>
 
-On an RTX 4070 SUPER at 1920 × 1080 these scenes cost the pack 1.2–1.4 ms of GPU time per frame,
-shadow pass included (F3: [day](docs/screenshots/f3-day.jpg), [night](docs/screenshots/f3-night.jpg),
-[sunset](docs/screenshots/f3-sunset.jpg)).
+On an RTX 4070 SUPER at 1920 × 1080 these scenes cost Daybreak 0.2 1.2–1.4 ms of GPU time per
+frame, shadow pass included (F3: [day](docs/screenshots/f3-day.jpg), [night](docs/screenshots/f3-night.jpg),
+[sunset](docs/screenshots/f3-sunset.jpg)). Since 0.3 Daybreak also counts the CPU time it costs
+Horizon (see [What 0.3 changes](#what-03-changes)).
 
 | Effect | How | Cost |
 | --- | --- | --- |
-| Sun and moon shadows | 2048² distorted shadow map, normal-offset lookup, slope-scaled bias, 1/4/9-tap grid PCF (smooth edges, no noise) | the shadow pass plus up to 9 compare taps per pixel |
+| Sun and moon shadows | 1536² distorted shadow map over 64 blocks, normal-offset lookup, slope-scaled bias, 1/4/9-tap grid PCF (smooth edges, no noise) | the shadow pass plus up to 9 compare taps per pixel |
 | Day and night light | own sun, sky and block light, wrapped diffuse, with vanilla's face shade taken back out | inside terrain's own draw: no extra pass |
-| Coloured block light | soul fire blue, redstone red, copper green, froglights… (`[[lights]]`) | one 3D texture read |
+| Coloured block light | soul fire blue, redstone red, copper green, froglights… (`[[lights]]`, only light of another colour than the warm default) | one 3D texture read |
 | Mob shadows | mobs, chests and particles take the sun's shadow and the sky's tint in the composite, by a terrain mask (`set_surface`) and the same shadow map | 4 compare taps, only on non-terrain pixels |
 | Light from held torches | Horizon's dynamic lights, in the item's colour, per pixel | Horizon's own: none from the pack |
 | Waving leaves and plants | vertex stage, continuous across two-block plants | a few `sin`s per vertex |
-| Water | rolling waves, Fresnel reflection (water mirror), refraction, depth absorption, sun glint | half-resolution mirror, can be turned off |
+| Water | rolling waves, Fresnel reflection (screen-space, or the full water mirror), refraction, depth absorption, sun glint | 12 + 4 steps per pixel of water; the mirror is a half-resolution pass |
 | Sky | deeper zenith, warm sunset band, sun glow; vanilla's horizon kept, so fog never seams | per sky pixel |
 | Sun rays | screen-space radial march over the sky mask, **quarter resolution**, 16 dithered steps | ~1/16 of the pixels |
 | Sun glare | bloom, halo, anamorphic streak and lens ghosts, dimmed by how much of the sun shows (9 taps) | in the same quarter-resolution pass |
@@ -41,20 +42,45 @@ The most expensive part is the shadow pass, which draws the terrain in its squar
 frame. Its size is up to the player: **Shadows** off means no shadow map and no pass at all,
 **Shadow detail** is the map's size and **Shadow distance** the square it covers (Lighting page of
 the Shader Options). Changing them rebuilds the map; nothing else is reloaded. The defaults are
-High; for slower or faster GPUs:
+High; for slower or faster computers:
 
-| Level | Shadows | Shadow detail | Shadow distance | Shadow edges | Reflections | Sun rays |
-| --- | --- | --- | --- | --- | --- | --- |
-| Low (about 0.5 ms) | off | – | – | – | off | 0 |
-| Medium (about 1 ms) | on | 1024 | 64 | Sharp | off | 0.35 |
-| **High** (default, about 1.2–1.4 ms) | on | 2048 | 96 | Soft | on | 0.5 |
-| Ultra | on | 4096 | 160 | Very soft | on | 0.6 |
+| Level | Shadows | Shadow detail | Shadow distance | Shadow edges | Reflections | Full mirror | Sun rays |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Low | off | – | – | – | off | off | 0 |
+| Medium | on | 1024 | 48 | Sharp | on | off | 0.35 |
+| **High** (default) | on | 1536 | 64 | Soft | on | off | 0.5 |
+| Ultra | on | 4096 | 160 | Very soft | on | on | 0.6 |
+
+Settings you changed yourself are kept when Daybreak updates (**Reset all options** on the Shader
+Options page brings back the defaults), except the shadow map's size and distance: in 0.3 they are
+new options with new values, so everyone starts on High.
 
 Until 0.1.1 these were four separate packs (Daybreak Low, Medium and Ultra came in a zip),
 because a pack's shadow map was fixed by its manifest. Horizon's shader API now lets options
 size it ([horizon#8557](https://github.com/horizon-rust/horizon/pull/8557)), so one pack does
 all four. Old `daybreak_low`, `daybreak_medium` and `daybreak_ultra` packs can be deleted from
 `shaderpacks/`.
+
+## What 0.3 changes
+
+Measured in a scripted flight through a town, a parade of mobs, fireworks, a redstone factory and
+a storm (7800X3D, RTX 4070 SUPER, 1080p), Daybreak 0.2 halved the frame rate, and the 1 % lows
+fell to a third. Most of it was not the GPU but the CPU, in three places, which 0.3 takes out:
+
+- **Coloured light only where it is coloured.** Horizon spreads the `[[lights]]` sources into a
+  grid on the CPU each time the camera moves on 16 blocks or a listed block changes. 0.2 listed
+  torches, lanterns, fire, glowstone, lava and redstone lamps, so a wall of switching lamps or a
+  lava lake rebuilt it frame after frame: the stutters. Their warm colour is now block light's
+  own tint, and `[[lights]]` lists only what is another colour (soul fire, redstone torches,
+  sea lanterns, amethyst, copper, froglights, end rods). Redstone lamps were red in 0.2; they
+  are warm yellow, like their texture.
+- **Screen-space reflections instead of the mirror.** The water mirror draws the terrain a second
+  time, and while it does Horizon can't cull the world on the GPU. Water now reflects what the
+  screen shows, and the sky where it ends: no extra pass. The mirror is still there as
+  **Full mirror** on the Water page.
+- **A smaller shadow square, a finer map.** 64 blocks instead of 96 is less than half the
+  sections for the shadow pass to cull and draw; 1536 texels over it are sharper near you than
+  0.2's 2048 over 96. Beyond it, the sky light still says where the sun reaches.
 
 ## Try it
 

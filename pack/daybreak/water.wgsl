@@ -29,6 +29,69 @@ fn distance_at(screen: vec2<f32>, depth: f32) -> f32 {
     return length(view.xyz / view.w);
 }
 
+// Screen-space reflection: the reflected ray `r` from camera-relative `p`, marched across the
+// world's picture before translucent terrain (`opaque_color` and `opaque_depth`). It costs no
+// pass of its own: the mirror draws the terrain a second time, which also keeps Horizon from
+// culling the world on the GPU. What the screen doesn't show (above its top, behind the
+// camera) is the sky's colour, `fallback`. Twelve steps, each longer than the last, out to
+// about 100 blocks, then four halvings around the first one that passes just behind something.
+const SSR_STEPS: i32 = 12;
+const SSR_REFINE: i32 = 4;
+
+fn screen_of(q: vec3<f32>) -> vec3<f32> {
+    let clip = frame.projection * (frame.view * vec4<f32>(q, 1.0));
+    if clip.w <= 0.01 {
+        return vec3<f32>(-1.0);
+    }
+    let ndc = clip.xyz / clip.w;
+    return vec3<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5, ndc.z);
+}
+
+fn screen_reflection(p: vec3<f32>, r: vec3<f32>, jitter: f32, fallback: vec3<f32>) -> vec3<f32> {
+    let size = vec2<f32>(textureDimensions(opaque_color));
+    var t_prev = 0.0;
+    var t = 0.6 * (0.6 + 0.8 * jitter);
+    for (var i = 0; i < SSR_STEPS; i++) {
+        let q = p + r * t;
+        let s = screen_of(q);
+        if any(s.xy < vec2<f32>(0.0)) || any(s.xy > vec2<f32>(1.0)) {
+            break;
+        }
+        let texel = vec2<i32>(min(s.xy * size, size - 1.0));
+        let scene = textureLoad(opaque_depth, texel, 0);
+        // Depth is reversed: the scene is nearer than the ray's point, so the ray went behind it.
+        if scene > s.z {
+            // Close enough behind to be what it hit, not something far in front of it.
+            let gap = length(q) - distance_at(s.xy, scene);
+            if gap < max(1.0, t * 0.35) {
+                var lo = t_prev;
+                var hi = t;
+                for (var j = 0; j < SSR_REFINE; j++) {
+                    let mid = 0.5 * (lo + hi);
+                    let m = screen_of(p + r * mid);
+                    let mt = vec2<i32>(clamp(m.xy, vec2<f32>(0.0), vec2<f32>(1.0)) * (size - 1.0));
+                    if textureLoad(opaque_depth, mt, 0) > m.z {
+                        hi = mid;
+                    } else {
+                        lo = mid;
+                    }
+                }
+                let h = screen_of(p + r * hi);
+                let uv = clamp(h.xy, vec2<f32>(0.0), vec2<f32>(1.0));
+                let hit = textureLoad(opaque_color, vec2<i32>(uv * (size - 1.0)), 0).rgb;
+                // Fade out toward the screen's edges, where the picture runs out.
+                let edge = min(min(uv.x, 1.0 - uv.x) * 8.0, min(uv.y, 1.0 - uv.y) * 6.0);
+                return mix(fallback, hit, clamp(edge, 0.0, 1.0));
+            }
+            // Far behind: the ray passed behind something in front of what it reflects (a
+            // tree before the shore). It carries on.
+        }
+        t_prev = t;
+        t *= 1.55;
+    }
+    return fallback;
+}
+
 fn water_surface(input: MaterialInput) -> vec4<f32> {
     let world = input.position + frame.camera_position;
     let to_eye = normalize(-input.position);
@@ -65,13 +128,20 @@ fn water_surface(input: MaterialInput) -> vec4<f32> {
     // Reflection, by Schlick's Fresnel (water's F0 is 0.02).
     let cos_v = clamp(dot(n, to_eye), 0.0, 1.0);
     let fresnel = 0.02 + 0.98 * pow(1.0 - cos_v, 5.0);
-    var mirrored = mix(frame.fog_color, frame.sky_color, 0.5) * mix(0.15, 1.0, daylight());
+    // Covered water (little sky light) reflects little of the sky.
+    let amount = fresnel * smoothstep(0.2, 0.8, input.light.y);
+    let r = reflect(-to_eye, n);
+    // The sky in the reflected direction: vanilla's fog at the horizon, its sky colour above.
+    var mirrored = mix(frame.fog_color, frame.sky_color, smoothstep(0.0, 0.35, r.y))
+        * mix(0.15, 1.0, daylight());
     if reflections && top && frame.has_reflection == 1u {
         let uv = clamp(input.screen + n.xz * 0.03, vec2<f32>(0.0), vec2<f32>(1.0));
         mirrored = textureSampleLevel(reflection, reflection_sampler, uv, 0.0).rgb;
+    } else if screen_reflections && top && amount > 0.02 {
+        // Looking almost straight down, the reflection is a few percent: not worth the march.
+        mirrored = screen_reflection(input.position, r, ign(input.screen * frame.resolution), mirrored);
     }
-    // Covered water (little sky light) reflects little of the sky.
-    color = mix(color, mirrored, fresnel * smoothstep(0.2, 0.8, input.light.y));
+    color = mix(color, mirrored, amount);
 
     // The sun's glint.
     let h = normalize(frame.light_direction + to_eye);

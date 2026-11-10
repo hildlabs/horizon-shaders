@@ -16,6 +16,6 @@ Daybreak is a shader pack in Horizon's own format. It runs inside Horizon's rend
 - A deeper sky with warm sunsets, sun rays, sun glare and haze
 - Mobs take the sun's shadow; the Nether and the End get their own light
 
-Every effect can be changed or turned off in the game: Options > Horizon Settings > Shader Packs > Shader Options. The quality is yours to pick there too: turn shadows off for the least GPU time, or choose the shadow map's detail (1024 to 4096) and distance (64 to 160 blocks). The defaults are soft shadows over 96 blocks with water reflections.
+Every effect can be changed or turned off in the game: Options > Horizon Settings > Shader Packs > Shader Options. The quality is yours to pick there too: turn shadows off for the least GPU time, or choose the shadow map's detail (1024 to 4096) and distance (48 to 160 blocks). The defaults are soft shadows over 64 blocks with screen-space water reflections; the full water mirror is one switch away.
 
 Original code, no Minecraft assets. Source: https://github.com/hildlabs/horizon-shaders"""

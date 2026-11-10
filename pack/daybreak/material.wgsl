@@ -7,7 +7,8 @@ override sun_strength: f32 = 1.0;
 override ambient_strength: f32 = 1.0;
 override block_light_strength: f32 = 1.0;
 override colored_lights: bool = true;
-override reflections: bool = true;
+override reflections: bool = false;
+override screen_reflections: bool = true;
 override water_clarity: f32 = 0.5;
 override relight_entities: bool = true;
 
@@ -47,10 +48,14 @@ fn material(input: MaterialInput) -> Surface {
     // shadow (acne), so it gets none of the sun at all.
     let facing = dot(n, l);
     var ndl = max(facing, 0.0) * smoothstep(0.0, 0.2, facing);
-    // Light shining through leaves and grass toward the eye: they glow against a low sun.
-    let to_eye = normalize(-input.position);
-    let through = pow(max(dot(to_eye, -l), 0.0), 4.0);
     var tint_direct = vec3<f32>(1.0);
+    // Light shining through leaves and grass toward the eye: they glow against a low sun.
+    // Only foliage pays for it.
+    var through = 0.0;
+    if foliage {
+        let to_eye = normalize(-input.position);
+        through = pow(max(dot(to_eye, -l), 0.0), 4.0);
+    }
     if input.material == MAT_LEAVES {
         // A leaf block is a cube: lit by its faces, plus what passes through it.
         ndl = ndl * 0.85 + 0.12 + through * 0.45;

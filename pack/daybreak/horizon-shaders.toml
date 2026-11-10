@@ -1,7 +1,7 @@
 schema = 1
 id = "daybreak"
 name = "Daybreak"
-version = "0.2.0"
+version = "0.3.0"
 api = "0.1"
 description = "Sun shadows, warm sunlight and blue shade, waving plants, reflective water, coloured block light, sun rays and glare, haze and bloom. Built to cost as little GPU time as possible."
 authors = ["hildlabs"]
@@ -23,13 +23,15 @@ name = "Wind and waves"
 
 [shadow]
 # The shadow pass is most of what Daybreak costs: it draws every section in the light's square
-# again, and half the distance is a quarter of the terrain. The player's options set all three:
+# again, on the CPU's lists, and half the distance is a quarter of the terrain. The default, 64
+# blocks at 1536 texels, is sharper near the camera than 0.2's 96 at 2048, for less than half
+# the sections. The player's options set all three:
 # `shadows` off means no map and no pass at all.
 option = "shadows"
-resolution_option = "shadow_resolution"
-distance_option = "shadow_distance"
-resolution = 2048
-distance = 96.0
+resolution_option = "shadow_detail"
+distance_option = "shadow_range"
+resolution = 1536
+distance = 64.0
 # Leaves cast whole shadows: no alpha test in the shadow pass, and no shimmer far away.
 solid_materials = [1]
 
@@ -60,7 +62,7 @@ file = "post/composite.wgsl"
 name = "Composite"
 
 [budget]
-gpu_ms = 2.0
+gpu_ms = 1.5
 
 # --- Materials: MaterialInput.material and VertexInput.material (ids in common.wgsl) ---
 
@@ -99,10 +101,11 @@ id = 5
 sprites = ["block/vine", "block/cave_vines*", "block/weeping_vines*", "block/twisting_vines*"]
 
 # --- Coloured block light (block_light_color) ---
-
-[[lights]]
-color = [1.0, 0.62, 0.32]
-blocks = ["torch", "wall_torch", "lantern", "campfire", "fire", "jack_o_lantern", "*candle*", "furnace", "smoker", "blast_furnace"]
+# Only light of another colour than block light's own warm tint (lighting.wgsl, `block_light`):
+# torches, lanterns, fire, glowstone, lava and redstone lamps are that tint already. Horizon
+# rebuilds the colour grid on the CPU when the camera moves on 16 blocks or a listed block
+# changes, so every source listed here costs frame time (a wall of redstone lamps switching, a
+# lava lake), and one that only repeats the tint costs it for nothing.
 
 [[lights]]
 color = [0.35, 0.75, 1.0]
@@ -110,15 +113,7 @@ blocks = ["soul_*"]
 
 [[lights]]
 color = [1.0, 0.25, 0.15]
-blocks = ["redstone_torch", "redstone_wall_torch", "redstone_lamp", "redstone_ore", "deepslate_redstone_ore"]
-
-[[lights]]
-color = [1.0, 0.42, 0.1]
-blocks = ["lava", "magma_block"]
-
-[[lights]]
-color = [1.0, 0.85, 0.5]
-blocks = ["glowstone", "shroomlight", "ochre_froglight"]
+blocks = ["redstone_torch", "redstone_wall_torch", "redstone_ore", "deepslate_redstone_ore"]
 
 [[lights]]
 color = [0.6, 0.92, 1.0]
@@ -156,13 +151,13 @@ items = ["page:lighting", "page:water", "page:nature", "page:atmosphere", "page:
 id = "lighting"
 name = "Lighting"
 description = "Sun shadows and the light of the sky and of blocks."
-items = ["shadows", "shadow_softness", "shadow_resolution", "shadow_distance", "sun_strength", "ambient_strength", "block_light_strength", "colored_lights", "relight_entities", ""]
+items = ["shadows", "shadow_softness", "shadow_detail", "shadow_range", "sun_strength", "ambient_strength", "block_light_strength", "colored_lights", "relight_entities", ""]
 
 [[pages]]
 id = "water"
 name = "Water"
 description = "Reflections, waves and how far you see into water."
-items = ["reflections", "water_waves", "water_clarity", ""]
+items = ["screen_reflections", "reflections", "water_waves", "water_clarity"]
 
 [[pages]]
 id = "nature"
@@ -190,20 +185,20 @@ type = "bool"
 default = true
 
 [[options]]
-id = "shadow_resolution"
+id = "shadow_detail"
 name = "Shadow detail"
 description = "The shadow map's size in texels: sharper shadows from a finer map, at more cost."
 type = "choice"
-values = ["1024", "2048", "4096"]
-default = "2048"
+values = ["1024", "1536", "2048", "4096"]
+default = "1536"
 
 [[options]]
-id = "shadow_distance"
+id = "shadow_range"
 name = "Shadow distance"
 description = "How far from you, in blocks, things cast shadows. The terrain drawn into the map grows with its square."
 type = "choice"
-values = ["64", "96", "160"]
-default = "96"
+values = ["48", "64", "96", "160"]
+default = "64"
 
 [[options]]
 id = "shadow_softness"
@@ -257,11 +252,18 @@ type = "bool"
 default = true
 
 [[options]]
-id = "reflections"
+id = "screen_reflections"
 name = "Reflections"
-description = "Water mirrors the world. Off saves a half-resolution pass of the terrain."
+description = "Water reflects what is on the screen, and the sky where the screen ends. No extra pass: it costs a few texture reads per pixel of water."
 type = "bool"
 default = true
+
+[[options]]
+id = "reflections"
+name = "Full mirror"
+description = "Water mirrors the whole world, also what is off the screen. Costs a half-resolution pass of the terrain near water, and while it is drawn Horizon culls the world on the CPU instead of the GPU."
+type = "bool"
+default = false
 
 [[options]]
 id = "water_waves"

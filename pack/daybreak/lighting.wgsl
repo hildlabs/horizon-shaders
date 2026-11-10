@@ -95,7 +95,10 @@ fn ambient_light(p: vec3<f32>, n: vec3<f32>, light: vec2<f32>, colored: vec3<f32
 // source's colour where the manifest gives one. Horizon's dynamic lights (a torch in hand)
 // already raise `level`; `colored` is their smooth, per-pixel part, in the item's colour.
 fn block_light(p: vec3<f32>, level: f32, colored: vec3<f32>) -> vec3<f32> {
-    var tint = vec3<f32>(1.0, 0.72, 0.45);
+    // Torches, lanterns, fire, glowstone and lava: the warm light most of the world has. They
+    // are not in `[[lights]]` (which only lists light of another colour), so Horizon has fewer
+    // sources to spread each time the grid moves or a lamp switches.
+    var tint = vec3<f32>(1.0, 0.64, 0.35);
     // Most of the world has no block light: skip the 3D texture read there.
     if colored_lights && level > 0.0 {
         let c = block_light_color(p);
