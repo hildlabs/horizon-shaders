@@ -62,10 +62,13 @@ fn shoulder(c: vec3<f32>) -> vec3<f32> {
     return min(c, vec3<f32>(0.8)) + 0.2 * (vec3<f32>(1.0) - exp(-over * 3.75)) + 0.25 * over;
 }
 
-// The height of water waves at world `xz`, 0..1 (0 the crest): two crossing swells and a
-// faster chop. A function of world position only, so neighbouring blocks meet without seams.
+// The height of water waves at world `xz`, 0..1 (0 the crest): three swells in directions
+// that line up with neither the block grid nor each other, so the surface doesn't tile into a
+// checkerboard. A function of world position only, so neighbouring blocks meet without seams.
+// `water_normal` (water.wgsl) takes its slope from these same three waves.
 fn water_wave(xz: vec2<f32>, t: f32) -> f32 {
-    let swell = sin(xz.x * 0.9 + t * 1.3) * sin(xz.y * 0.7 + t * 1.1);
-    let chop = sin((xz.x + xz.y) * 1.7 - t * 2.1) * 0.5;
-    return 0.5 - (swell + chop) / 3.0;
+    let w1 = sin(dot(xz, vec2<f32>(0.42, 0.25)) + t * 1.1) * 0.45;
+    let w2 = sin(dot(xz, vec2<f32>(-0.31, 0.58)) + t * 1.45) * 0.35;
+    let w3 = sin(dot(xz, vec2<f32>(0.67, -0.52)) - t * 1.85) * 0.20;
+    return 0.5 - (w1 + w2 + w3) * 0.5;
 }
