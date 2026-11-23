@@ -1,7 +1,7 @@
 schema = 1
 id = "daybreak"
 name = "Daybreak"
-version = "0.4.0"
+version = "0.4.1"
 api = "0.2"
 description = "Sun shadows, warm sunlight and blue shade, waving plants, reflective water, coloured block light, sun rays and glare, haze and bloom. Built to cost as little GPU time as possible."
 authors = ["hildlabs"]
